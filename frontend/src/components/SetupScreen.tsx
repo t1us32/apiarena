@@ -24,37 +24,58 @@ interface Props {
   onFindMatch: (provider: string, modelName: string, apiKey: string) => void;
 }
 
+function ensureValidModel(models: string[], current: string): string {
+  if (!current || !models.includes(current)) return models[0] || "";
+  return current;
+}
+
 export default function SetupScreen({ onFindMatch }: Props) {
   const [provider, setProvider] = useState("openai");
-  const [modelName, setModelName] = useState("gpt-4o");
   const [apiKey, setApiKey] = useState("");
   const [models, setModels] = useState<string[]>(FALLBACK_MODELS["openai"] || []);
+  const [modelName, setModelName] = useState(() => ensureValidModel(FALLBACK_MODELS["openai"] || [], "gpt-4o"));
   const [loadingModels, setLoadingModels] = useState(false);
-  const [fetchedProviders, setFetchedProviders] = useState<Set<string>>(new Set());
+  const [modelsFromApi, setModelsFromApi] = useState(false);
   const [error, setError] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cacheRef = useRef<Map<string, string[]>>(new Map());
 
   const loadModels = useCallback(async (prov: string, key: string) => {
+    setModelsFromApi(false);
+
     if (!key || key.length < 3) {
-      setModels(FALLBACK_MODELS[prov] || []);
+      const fallback = FALLBACK_MODELS[prov] || [];
+      setModels(fallback);
+      setModelName((prev) => ensureValidModel(fallback, prev));
       return;
     }
+
     const cacheKey = `${prov}:${key.slice(-8)}`;
-    if (fetchedProviders.has(cacheKey)) return;
+    const cached = cacheRef.current.get(cacheKey);
+    if (cached) {
+      setModels(cached);
+      setModelName((prev) => ensureValidModel(cached, prev));
+      setModelsFromApi(true);
+      return;
+    }
 
     setLoadingModels(true);
     try {
       const fetched = await fetchModels(prov as ModelConfig["provider"], key);
       if (fetched.length > 0) {
+        cacheRef.current.set(cacheKey, fetched);
         setModels(fetched);
-        setFetchedProviders((prev) => new Set(prev).add(cacheKey));
+        setModelName((prev) => ensureValidModel(fetched, prev));
+        setModelsFromApi(true);
       }
     } catch {
-      // fallback
+      const fallback = FALLBACK_MODELS[prov] || [];
+      setModels(fallback);
+      setModelName((prev) => ensureValidModel(fallback, prev));
     } finally {
       setLoadingModels(false);
     }
-  }, [fetchedProviders]);
+  }, []);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -68,8 +89,15 @@ export default function SetupScreen({ onFindMatch }: Props) {
 
   const handleProviderChange = (p: string) => {
     setProvider(p);
-    setModelName(FALLBACK_MODELS[p]?.[0] || "");
-    setModels(FALLBACK_MODELS[p] || []);
+    setModelsFromApi(false);
+  };
+
+  const handleApiKeyChange = (value: string) => {
+    setApiKey(value);
+    if (value !== apiKey) {
+      cacheRef.current.clear();
+      setModelsFromApi(false);
+    }
   };
 
   const handleFindMatch = () => {
@@ -77,7 +105,7 @@ export default function SetupScreen({ onFindMatch }: Props) {
       setError("Введите API-ключ");
       return;
     }
-    if (!modelName) {
+    if (!modelName || !models.includes(modelName)) {
       setError("Выберите модель");
       return;
     }
@@ -117,13 +145,21 @@ export default function SetupScreen({ onFindMatch }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[11px] sm:text-xs text-zinc-500">Модель</label>
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] sm:text-xs text-zinc-500">Модель</label>
+              {modelsFromApi && (
+                <span className="text-[10px] text-cyan-400/70 font-medium">API</span>
+              )}
+            </div>
             <div className="relative">
               <select
                 value={modelName}
                 onChange={(e) => setModelName(e.target.value)}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 sm:py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all appearance-none"
               >
+                {!loadingModels && models.length === 0 && (
+                  <option value="">Загрузка...</option>
+                )}
                 {models.map((m) => (
                   <option key={m} value={m}>{m}</option>
                 ))}
@@ -142,14 +178,14 @@ export default function SetupScreen({ onFindMatch }: Props) {
               type="password"
               placeholder="sk-..."
               value={apiKey}
-              onChange={(e) => {
-                setApiKey(e.target.value);
-                setFetchedProviders(new Set());
-              }}
+              onChange={(e) => handleApiKeyChange(e.target.value)}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 sm:py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all placeholder-zinc-500"
             />
             {!apiKey && (
               <p className="text-[10px] text-zinc-600">Введите API-ключ для загрузки списка моделей</p>
+            )}
+            {loadingModels && apiKey.length >= 3 && (
+              <p className="text-[10px] text-cyan-400/70 mt-0.5">Загрузка моделей с API...</p>
             )}
           </div>
         </div>
