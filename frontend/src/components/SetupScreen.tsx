@@ -88,27 +88,27 @@ export default function SetupScreen({ onFindMatch }: Props) {
   const isValid = apiKey.trim().length > 0;
 
   return (
-    <div className="flex-1 flex items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-6">
+    <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md space-y-5 sm:space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center text-zinc-950 text-2xl font-bold">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center text-zinc-950 text-xl sm:text-2xl font-bold">
             A
           </div>
-          <h2 className="text-xl font-bold tracking-tight">AI Арена</h2>
-          <p className="text-sm text-zinc-400">Мультиплеерная битва промптов</p>
-          <p className="text-xs text-zinc-600 mt-2 max-w-xs mx-auto">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight">AI Арена</h2>
+          <p className="text-xs sm:text-sm text-zinc-400">Мультиплеерная битва промптов</p>
+          <p className="text-[11px] sm:text-xs text-zinc-600 mt-2 max-w-xs mx-auto">
             Настройте своего ИИ-агента и найдите соперника. Вы каждый напишете
             системный промпт для своего ИИ, затем наблюдайте за битвой в реальном времени.
           </p>
         </div>
 
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 space-y-4">
+        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 sm:p-5 space-y-3 sm:space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs text-zinc-500">Провайдер</label>
+            <label className="text-[11px] sm:text-xs text-zinc-500">Провайдер</label>
             <select
               value={provider}
               onChange={(e) => handleProviderChange(e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 sm:py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
             >
               {Object.entries(PROVIDER_LABELS).map(([val, lbl]) => (
                 <option key={val} value={val}>{lbl}</option>
@@ -117,12 +117,12 @@ export default function SetupScreen({ onFindMatch }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs text-zinc-500">Модель</label>
+            <label className="text-[11px] sm:text-xs text-zinc-500">Модель</label>
             <div className="relative">
               <select
                 value={modelName}
                 onChange={(e) => setModelName(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all appearance-none"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 sm:py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all appearance-none"
               >
                 {models.map((m) => (
                   <option key={m} value={m}>{m}</option>
@@ -137,7 +137,7 @@ export default function SetupScreen({ onFindMatch }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs text-zinc-500">API-ключ</label>
+            <label className="text-[11px] sm:text-xs text-zinc-500">API-ключ</label>
             <input
               type="password"
               placeholder="sk-..."
@@ -146,7 +146,7 @@ export default function SetupScreen({ onFindMatch }: Props) {
                 setApiKey(e.target.value);
                 setFetchedProviders(new Set());
               }}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all placeholder-zinc-500"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 sm:py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all placeholder-zinc-500"
             />
             {!apiKey && (
               <p className="text-[10px] text-zinc-600">Введите API-ключ для загрузки списка моделей</p>
@@ -163,7 +163,7 @@ export default function SetupScreen({ onFindMatch }: Props) {
         <button
           onClick={handleFindMatch}
           disabled={!isValid}
-          className="w-full py-3.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-zinc-950 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/20"
+          className="w-full py-3 sm:py-3.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-zinc-950 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/20"
         >
           Найти игру
         </button>

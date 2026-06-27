@@ -232,21 +232,21 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="border-b border-zinc-800 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center font-bold text-zinc-950 text-sm">
+      <header className="border-b border-zinc-800 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center font-bold text-zinc-950 text-xs sm:text-sm shrink-0">
               A
             </div>
-            <div>
-              <h1 className="text-lg font-semibold tracking-tight">AI Арена</h1>
-              <p className="text-xs text-zinc-500">Мультиплеерная битва промптов</p>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-semibold tracking-tight truncate">AI Арена</h1>
+              <p className="text-[10px] sm:text-xs text-zinc-500 hidden sm:block">Мультиплеерная битва промптов</p>
             </div>
           </div>
           {phase !== "setup" && (
             <button
               onClick={handleBackToSetup}
-              className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+              className="text-xs sm:text-sm text-zinc-400 hover:text-zinc-200 transition-colors shrink-0"
             >
               {phase === "battle" ? "Выйти" : "Отмена"}
             </button>

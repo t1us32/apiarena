@@ -11,6 +11,17 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+input, textarea, select, button {
+  font-size: max(16px, inherit);
+}
+
+@media (max-width: 640px) {
+  body {
+    overscroll-behavior: none;
+  }
 }
 
 @keyframes pulse-glow {

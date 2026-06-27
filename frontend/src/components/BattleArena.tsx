@@ -59,33 +59,33 @@ export default function BattleArena({ state, onBack }: Props) {
   const agent2Label = state.scenario?.agent_2_label || "Агент 2";
 
   return (
-    <div className="flex-1 flex flex-col max-w-4xl w-full mx-auto px-6 py-4">
+    <div className="flex-1 flex flex-col max-w-4xl w-full mx-auto px-3 sm:px-6 py-3 sm:py-4">
       {/* Статус-бар */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{phaseIcon[state.phase]}</span>
-          <span className="text-sm text-zinc-400">{phaseLabels[state.phase]}</span>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
+          <span className="text-base sm:text-lg">{phaseIcon[state.phase]}</span>
+          <span className="text-xs sm:text-sm text-zinc-400 truncate">{phaseLabels[state.phase]}</span>
           {state.phase === "running" && (
-            <span className="text-xs text-zinc-600">
+            <span className="text-[10px] sm:text-xs text-zinc-600">
               Ход {state.currentTurn}/{state.maxTurns}
             </span>
           )}
           {state.streamingAgent && state.phase === "running" && (
-            <span className="text-xs text-cyan-400 animate-pulse">
+            <span className="text-[10px] sm:text-xs text-cyan-400 animate-pulse truncate">
               {state.streamingAgent === "agent_2"
                 ? `${agent2Label} думает...`
                 : `${agent1Label} отвечает...`}
             </span>
           )}
           {state.phase === "judging" && (
-            <span className="text-xs text-amber-400 animate-pulse">Судья анализирует расшифровку...</span>
+            <span className="text-[10px] sm:text-xs text-amber-400 animate-pulse truncate">Судья анализирует расшифровку...</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {Array.from({ length: state.maxTurns }, (_, i) => (
             <div
               key={i}
-              className={`w-2 h-2 rounded-full transition-colors ${
+              className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-colors ${
                 i < state.currentTurn
                   ? "bg-cyan-500"
                   : i === state.currentTurn && state.phase === "running"
@@ -100,7 +100,7 @@ export default function BattleArena({ state, onBack }: Props) {
       {/* Область чата */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-4 scrollbar-thin pr-2 mb-4"
+        className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 scrollbar-thin pr-1 sm:pr-2 mb-3 sm:mb-4"
       >
         {state.turns.map((turn) => (
           <div key={`${turn.turn_number}-${turn.timestamp}`} className="space-y-3">
@@ -151,13 +151,13 @@ export default function BattleArena({ state, onBack }: Props) {
       </div>
 
       {/* Футер */}
-      <div className="flex items-center justify-between py-3 border-t border-zinc-800">
-        <div className="text-xs text-zinc-600">
+      <div className="flex items-center justify-between py-2 sm:py-3 border-t border-zinc-800">
+        <div className="text-[10px] sm:text-xs text-zinc-600 truncate max-w-[60%]">
           {state.gameId && <span>Игра: {state.gameId}</span>}
         </div>
         <button
           onClick={onBack}
-          className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+          className="text-xs sm:text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
         >
           ← Назад
         </button>
