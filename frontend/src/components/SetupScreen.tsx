@@ -90,6 +90,9 @@ export default function SetupScreen({ onFindMatch }: Props) {
   const handleProviderChange = (p: string) => {
     setProvider(p);
     setModelsFromApi(false);
+    const fallback = FALLBACK_MODELS[p] || [];
+    setModels(fallback);
+    setModelName((prev) => ensureValidModel(fallback, prev));
   };
 
   const handleApiKeyChange = (value: string) => {
