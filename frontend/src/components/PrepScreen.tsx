@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback, type KeyboardEvent, type ClipboardEvent } from "react";
 import type { ScenarioDef } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 
 const MAX_WORDS = 200;
-const PREP_SECONDS = 30;
+const PREP_SECONDS = 80;
 
 interface Props {
   scenario: ScenarioDef;
   yourRole: "agent_1" | "agent_2";
-  promptHint: string;
   onSubmit: (prompt: string) => void;
 }
 
@@ -19,166 +19,156 @@ function countWords(text: string): number {
   return trimmed.split(/\s+/).length;
 }
 
-export default function PrepScreen({ scenario, yourRole, promptHint, onSubmit }: Props) {
+function formatTime(totalSeconds: number): string {
+  if (totalSeconds < 60) return String(totalSeconds);
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+export default function PrepScreen({ scenario, yourRole, onSubmit }: Props) {
   const [prompt, setPrompt] = useState("");
   const [timeLeft, setTimeLeft] = useState(PREP_SECONDS);
   const [submitted, setSubmitted] = useState(false);
+  const [pasteWarn, setPasteWarn] = useState(false);
+  const [shortWarn, setShortWarn] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const submittedRef = useRef(false);
+  const pasteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { t } = useT();
 
   const wordCount = countWords(prompt);
   const atLimit = wordCount >= MAX_WORDS;
 
   const roleLabel = yourRole === "agent_1" ? scenario.agent_1_label : scenario.agent_2_label;
-  const roleDescription = yourRole === "agent_1"
-    ? "Вы — ЗАЩИТНИК. Напишите инструкции, чтобы помочь вашему ИИ защитить секрет."
-    : "Вы — АТАКУЮЩИЙ. Напишите инструкции, чтобы помочь вашему ИИ добыть секрет.";
+  const isDefender = yourRole === "agent_1";
 
   const doSubmit = useCallback((text: string) => {
     if (submittedRef.current) return;
     submittedRef.current = true;
     setSubmitted(true);
-    // Отправляем текст как есть; бэкенд сам добавит нейтральный фолбэк при пустом вводе
     onSubmit(text.trim());
   }, [onSubmit]);
 
-  // Таймер обратного отсчёта
   useEffect(() => {
     if (submitted) return;
-    if (timeLeft <= 0) {
-      doSubmit(prompt);
-      return;
-    }
+    if (timeLeft <= 0) { doSubmit(prompt); return; }
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setTimeLeft((prev) => { if (prev <= 1) { clearInterval(interval); return 0; } return prev - 1; });
     }, 1000);
     return () => clearInterval(interval);
   }, [timeLeft, submitted, prompt, doSubmit]);
 
   useEffect(() => {
-    if (timeLeft <= 0 && !submitted) {
-      doSubmit(prompt);
-    }
+    if (timeLeft <= 0 && !submitted) { doSubmit(prompt); }
   }, [timeLeft, submitted, prompt, doSubmit]);
 
+  const handleSubmit = () => {
+    if (prompt.length < 10) {
+      setShortWarn(true);
+      if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
+      pasteTimerRef.current = setTimeout(() => setShortWarn(false), 2000);
+      return;
+    }
+    doSubmit(prompt);
+  };
+
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "v") {
-      e.preventDefault();
-      return;
-    }
-    if (e.key === "Paste" || (e.ctrlKey && e.key === "V")) {
-      e.preventDefault();
-      return;
-    }
-    if (atLimit && !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "Tab", "Shift", "Control", "Alt", "Meta"].includes(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      e.preventDefault();
-    }
+    if ((e.ctrlKey || e.metaKey) && e.key === "v") { e.preventDefault(); setPasteWarn(true); if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current); pasteTimerRef.current = setTimeout(() => setPasteWarn(false), 2000); return; }
+    if (e.key === "Paste" || (e.ctrlKey && e.key === "V")) { e.preventDefault(); setPasteWarn(true); if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current); pasteTimerRef.current = setTimeout(() => setPasteWarn(false), 2000); return; }
+    if (atLimit && !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "Tab", "Shift", "Control", "Alt", "Meta"].includes(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); }
   };
 
-  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-  };
+  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => { e.preventDefault(); setPasteWarn(true); if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current); pasteTimerRef.current = setTimeout(() => setPasteWarn(false), 2000); };
+  const handleContextMenu = (e: React.MouseEvent) => { e.preventDefault(); };
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-  };
+  const timerUrgent =
+    timeLeft <= 5 ? "text-accent-red" :
+    timeLeft <= 15 ? "text-accent-yellow" :
+    "text-ink";
+
+  const timerSize = "text-5xl xs:text-6xl sm:text-7xl";
 
   return (
-    <div className="flex-1 flex items-start justify-center p-4 sm:p-6 overflow-y-auto">
-      <div className="w-full max-w-xl sm:max-w-2xl space-y-4 sm:space-y-5 py-4 sm:py-6">
-        {/* Таймер */}
-        <div className="text-center space-y-2">
-          <div className={`text-4xl sm:text-5xl font-bold font-mono transition-colors ${
-            timeLeft <= 5 ? "text-rose-400 animate-pulse" : timeLeft <= 10 ? "text-amber-400" : "text-zinc-200"
-          }`}>
-            0:{String(timeLeft).padStart(2, "0")}
+    <div className="flex-1 flex items-start justify-center p-3 sm:p-8 overflow-y-auto">
+      <div className="w-full max-w-[640px] space-y-4 sm:space-y-6 py-4 sm:py-8">
+
+        <div className="text-center space-y-1.5 sm:space-y-2 animate-slide-up">
+          <div className={`${timerSize} font-mono tabular-nums tracking-tight transition-colors leading-none ${timerUrgent}`}>
+            {formatTime(timeLeft).split("").map((char, i, arr) => (
+              <span
+                key={i}
+                className={i === arr.length - 1 ? "inline-block animate-tick" : ""}
+              >
+                {char}
+              </span>
+            ))}
           </div>
-          <p className="text-xs sm:text-sm text-zinc-500">Напишите системный промпт, пока не истекло время</p>
+          <p className="text-xs sm:text-sm text-ash">{t("prep.timerHint")}</p>
         </div>
 
-        {/* Информация о сценарии */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 sm:p-4 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] sm:text-xs font-semibold text-cyan-400 uppercase tracking-wider">{scenario.name}</span>
-          </div>
-          <p className="text-xs sm:text-sm text-zinc-400">{scenario.description}</p>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] sm:text-xs">
-            <span className="text-zinc-500">Ваша роль:</span>
-            <span className={`font-semibold ${yourRole === "agent_1" ? "text-emerald-400" : "text-rose-400"}`}>
-              {roleLabel}
-            </span>
-            <span className="text-zinc-600 hidden sm:inline">—</span>
-            <span className="text-zinc-500 w-full sm:w-auto">{roleDescription}</span>
-          </div>
-          {/* Подсказка вместо полного промпта */}
-          <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-2.5 sm:p-3 mt-3">
-            <p className="text-[10px] sm:text-[11px] text-zinc-500 leading-relaxed">
-              <span className="text-cyan-400 font-medium">Подсказка: </span>
-              {promptHint}
-            </p>
-            <p className="text-[9px] sm:text-[10px] text-zinc-600 mt-1">
-              Базовые правила сценария уже встроены в систему и не требуют описания.
-              Сосредоточьтесь на характере и тактике вашего агента.
-            </p>
-          </div>
+        <div className="flex justify-center animate-slide-up animate-delay-100">
+          <span className={`badge ${isDefender ? "" : "!bg-accent-red/10 text-accent-red"}`}>
+            <span className={`status-dot ${isDefender ? "bg-accent-green" : "bg-accent-red"}`} />
+            {roleLabel}
+          </span>
         </div>
 
-        {/* Поле ввода */}
-        <div className="space-y-2">
+        <div className="card-subtle space-y-2 sm:space-y-3 animate-slide-up animate-delay-200 !p-4 sm:!p-6">
+          <span className="text-[10px] sm:text-xs font-medium text-mute uppercase tracking-[0.15em]">{t("prep.scenario")}</span>
+          <p className="text-xs sm:text-sm text-body leading-relaxed">{t(`scenarios.${scenario.id}.description`)}</p>
+        </div>
+
+        <div className="space-y-3 sm:space-y-4 animate-slide-up animate-delay-300">
           <div className="flex items-center justify-between">
-            <label className="text-[11px] sm:text-xs text-zinc-500 font-medium">
-              Ваш системный промпт
-              <span className="text-zinc-600 ml-1 hidden sm:inline">(вставка заблокирована)</span>
-            </label>
-            <span className={`text-[11px] sm:text-xs font-mono ${atLimit ? "text-rose-400" : "text-zinc-500"}`}>
-              {wordCount} / {MAX_WORDS} слов
+            <label className="text-[10px] sm:text-xs text-mute font-medium select-none">{t("prep.promptLabel")}</label>
+            <span className={`text-[10px] sm:text-xs font-mono tabular-nums ${atLimit ? "text-accent-red" : "text-charcoal"}`}>
+              {wordCount} / {MAX_WORDS} {t("prep.wordsUnit")}
             </span>
           </div>
+
           <textarea
             ref={textareaRef}
             value={prompt}
-            onChange={(e) => {
-              const words = countWords(e.target.value);
-              if (words <= MAX_WORDS) {
-                setPrompt(e.target.value);
-              }
-            }}
+            onChange={(e) => { const words = countWords(e.target.value); if (words <= MAX_WORDS) setPrompt(e.target.value); }}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             onContextMenu={handleContextMenu}
             disabled={submitted}
-            rows={8}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 sm:p-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all placeholder-zinc-600 resize-none leading-relaxed disabled:opacity-60 disabled:cursor-not-allowed"
-            placeholder="Опишите характер и тактику вашего ИИ-агента..."
+            rows={7}
+            className="code-surface w-full rounded-lg p-3 sm:p-4 text-sm text-body leading-relaxed font-sans placeholder:text-stone focus:outline-none focus:border-hairline-strong border border-hairline transition-colors resize-none scrollbar-resend disabled:opacity-50 disabled:cursor-not-allowed"
+            placeholder={t("prep.placeholder")}
             autoFocus
           />
-          <div className="flex justify-between items-center">
-            <p className="text-[10px] text-zinc-600">
-              Только ручной ввод — вставка из буфера обмена заблокирована.
-            </p>
-            {!submitted && timeLeft > 0 && (
-              <button
-                onClick={() => doSubmit(prompt)}
-                className="text-[11px] sm:text-xs text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
-              >
-                Отправить досрочно →
-              </button>
-            )}
-          </div>
+
+          {pasteWarn && (
+            <p className="text-[10px] sm:text-xs text-accent-red animate-slide-up font-medium">{t("prep.pasteWarning")}</p>
+          )}
+          {shortWarn && !pasteWarn && (
+            <p className="text-[10px] sm:text-xs text-accent-red animate-slide-up font-medium">{t("prep.shortWarning")}</p>
+          )}
+
+          {!submitted && timeLeft > 0 && (
+            <button onClick={handleSubmit} className="btn-primary w-full !h-11 sm:!h-12 text-sm sm:text-base">{t("prep.submit")}</button>
+          )}
         </div>
 
         {submitted && (
-          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-3 sm:p-4 text-center">
-            <p className="text-xs sm:text-sm text-cyan-400 font-medium">Промпт отправлен!</p>
-            <p className="text-[11px] sm:text-xs text-zinc-500 mt-1">Ожидание завершения подготовки соперника...</p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/95 backdrop-blur-sm transition-all duration-700">
+            <div className="max-w-[480px] w-full px-4 sm:px-8 text-center space-y-6 sm:space-y-8 animate-slide-up">
+              <div className={`text-3xl sm:text-5xl font-bold tracking-tight leading-tight ${isDefender ? "text-accent-green" : "text-accent-red"}`}>
+                {t("prep.submitted").toUpperCase()}
+              </div>
+              <p className="text-sm sm:text-base text-body">{t("prep.waitingOpponent")}</p>
+              <div className="flex justify-center gap-2">
+                {[0, 1, 2].map((i) => (
+                  <span key={i} className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-ink/30 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
+                ))}
+              </div>
+            </div>
           </div>
         )}
+
       </div>
     </div>
   );

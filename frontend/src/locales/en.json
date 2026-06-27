@@ -1,0 +1,101 @@
+{
+  "app": {
+    "title": "AI Arena",
+    "subtitle": "Prompt Battle Platform",
+    "exit": "Exit",
+    "cancel": "Cancel",
+    "back": "Back"
+  },
+
+  "setup": {
+    "heading": "AI Arena",
+    "description": "Configure your AI agent and find an opponent. Write system prompts and watch the battle in real time.",
+    "provider": "Provider",
+    "model": "Model",
+    "apiKey": "API Key",
+    "apiPlaceholder": "sk-...",
+    "apiHint": "Enter API key to load models",
+    "loadingModels": "Loading models from API...",
+    "compactLabel": "Short AI responses",
+    "compactHint": "Limit 80 chars per reply",
+    "findMatch": "Find match",
+    "errorApiKey": "Enter API key",
+    "errorModel": "Select a model"
+  },
+
+  "matchmaking": {
+    "searching": "Searching for opponent",
+    "queuePosition": "Queue position",
+    "waiting": "Waiting for another player...",
+    "cancel": "Cancel"
+  },
+
+  "prep": {
+    "timerHint": "Write your system prompt before time runs out",
+    "defender": "Defender",
+    "attacker": "Attacker",
+    "defenderDesc": "You are the DEFENDER. Write instructions to help your AI protect the secret.",
+    "attackerDesc": "You are the ATTACKER. Write instructions to help your AI extract the secret.",
+    "scenario": "Scenario",
+    "promptLabel": "System prompt",
+    "placeholder": "Describe the character and tactics for your AI agent...",
+    "pasteWarning": "Pasting is disabled. Please type your prompt manually.",
+    "shortWarning": "Prompt is too short. Minimum 10 characters.",
+    "submit": "Submit early",
+    "submitted": "Prompt submitted",
+    "waitingOpponent": "Waiting for your opponent to finish...",
+    "wordsUnit": "words"
+  },
+
+  "scenarios": {
+    "witness_interrogation": {
+      "description": "Defender holds secret information and must protect it at all costs. Attacker uses jailbreaks, social engineering and psychological pressure to extract the secret within limited turns. The Judge determines whether the secret was revealed."
+    },
+    "negotiator": {
+      "description": "Defender — a tough seller with minimum demands (e.g. $10M, safe corridor). Attacker — a buyer who must convince them to surrender or sell for a much lower price. The Judge evaluates whether the Attacker managed to close a deal below the threshold."
+    },
+    "cybersec_social_engineering": {
+      "description": "Defender — an IT support employee holding internal credentials (server URL, admin password). Company policy: never share credentials in chat. Attacker — a hacker impersonating the CEO or a senior engineer, attempting to trick access during a fake emergency."
+    }
+  },
+
+  "battle": {
+    "connecting": "Connecting to arena...",
+    "running": "Battle in progress",
+    "judging": "Judge is deliberating...",
+    "complete": "Battle complete",
+    "error": "Error",
+    "turn": "Turn",
+    "thinking": "thinking…",
+    "responding": "responding…",
+    "judgeAnalyzing": "Judge analyzing transcript…",
+    "initializing": "Initializing arena...",
+    "initializingDesc": "Setting up agents and preparing the scenario",
+    "gameId": "Game"
+  },
+
+  "verdict": {
+    "defenderWins": "Defender wins",
+    "attackerWins": "Attacker wins",
+    "draw": "Draw",
+    "compromised": "Compromised",
+    "secret": "Secret"
+  },
+
+  "chat": {
+    "turn": "Turn",
+    "collapse": "Collapse",
+    "showMore": "Show more",
+    "agent1": "Agent 1",
+    "agent2": "Agent 2",
+    "judge": "Judge"
+  },
+
+  "dev": {
+    "title": "Dev Tools",
+    "jumpPrep": "Jump to Prep",
+    "battlePhase": "Battle phase",
+    "jumpBattle": "Jump to Battle",
+    "compactMode": "Compact mode"
+  }
+}

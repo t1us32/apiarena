@@ -48,12 +48,13 @@ async def game_websocket(ws: WebSocket):
                 model_name = data.get("model_name", "gpt-4o")
                 api_key = data.get("api_key", "")
                 api_base = data.get("api_base")
+                compact_mode = data.get("compact_mode", False)
 
                 if not api_key:
                     await ws.send_json({"event": "error", "data": {"message": "API key required"}})
                     continue
 
-                player = await matchmaking.join_queue(ws, provider, model_name, api_key, api_base)
+                player = await matchmaking.join_queue(ws, provider, model_name, api_key, api_base, compact_mode)
                 player_id = player.player_id
 
             elif event == "submit_prompt":
@@ -70,7 +71,7 @@ async def game_websocket(ws: WebSocket):
 
             elif event == "leave_queue":
                 if player_id:
-                    matchmaking.remove_from_queue(player_id)
+                    await matchmaking.remove_from_queue(player_id)
                 await ws.close()
                 return
 
@@ -97,3 +98,6 @@ async def game_websocket(ws: WebSocket):
                     room.phase = "aborted"
                     room._done.set()
                 matchmaking.cleanup(room_id)
+            else:
+                # Player was only in queue, not yet in a room
+                await matchmaking.remove_from_queue(player_id)

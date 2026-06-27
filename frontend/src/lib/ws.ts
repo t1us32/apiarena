@@ -1,8 +1,14 @@
 "use client";
 
-const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
-
 type EventHandler = (event: string, data: Record<string, unknown>) => void;
+
+function getWsUrl(gamePath: string): string {
+  if (typeof window !== "undefined") {
+    const host = window.location.host;
+    return `ws://${host}${gamePath}`;
+  }
+  return `${process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"}${gamePath}`;
+}
 
 export class GameSocket {
   private ws: WebSocket | null = null;
@@ -11,7 +17,7 @@ export class GameSocket {
   private url: string;
 
   constructor(gamePath: string = "/ws/game") {
-    this.url = `${WS_BASE}${gamePath}`;
+    this.url = getWsUrl(gamePath);
   }
 
   connect(onEvent: EventHandler): void {

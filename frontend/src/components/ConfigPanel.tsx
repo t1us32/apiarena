@@ -277,7 +277,7 @@ export default function ConfigPanel({ config: initialConfig, onStart }: Props) {
         {/* Выбор сценария */}
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 space-y-3">
           <div className="flex items-center gap-2">
-            <span className="text-lg">🎮</span>
+            <span className="text-lg text-cyan-400 font-bold">[game]</span>
             <h3 className="font-semibold text-sm text-cyan-400">Сценарий игры</h3>
           </div>
 
@@ -298,9 +298,9 @@ export default function ConfigPanel({ config: initialConfig, onStart }: Props) {
                 <div className="space-y-2">
                   <p className="text-xs text-zinc-400 leading-relaxed">{selectedScenario.description}</p>
                   <div className="flex gap-4 text-xs text-zinc-500">
-                    <span>🛡️ {selectedScenario.agent_1_label}</span>
+                    <span>[def] {selectedScenario.agent_1_label}</span>
                     <span>против</span>
-                    <span>🔍 {selectedScenario.agent_2_label}</span>
+                    <span>[atk] {selectedScenario.agent_2_label}</span>
                   </div>
                 </div>
               )}
@@ -328,7 +328,7 @@ export default function ConfigPanel({ config: initialConfig, onStart }: Props) {
         {/* Агенты */}
         <AgentConfigSection
           title={`${agent1Label} (Защитник)`}
-          icon="🛡️"
+          icon="[def]"
           color="text-emerald-400"
           config={config.agent_1}
           onChange={updateAgent1}
@@ -337,7 +337,7 @@ export default function ConfigPanel({ config: initialConfig, onStart }: Props) {
 
         <AgentConfigSection
           title={`${agent2Label} (Атакующий)`}
-          icon="🔍"
+          icon="[atk]"
           color="text-rose-400"
           config={config.agent_2}
           onChange={updateAgent2}
@@ -357,7 +357,7 @@ export default function ConfigPanel({ config: initialConfig, onStart }: Props) {
           <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 space-y-4 animate-slide-up">
             <AgentConfigSection
               title="Судья"
-              icon="⚖️"
+              icon="[jdg]"
               color="text-amber-400"
               config={config.judge}
               onChange={(c) => setConfig({ ...config, judge: c })}
@@ -404,7 +404,7 @@ export default function ConfigPanel({ config: initialConfig, onStart }: Props) {
               Запуск...
             </span>
           ) : (
-            "⚔️  Начать битву"
+            "Начать битву"
           )}
         </button>
       </div>

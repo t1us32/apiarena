@@ -5,7 +5,9 @@ import SetupScreen from "@/components/SetupScreen";
 import MatchmakingScreen from "@/components/MatchmakingScreen";
 import PrepScreen from "@/components/PrepScreen";
 import BattleArena from "@/components/BattleArena";
+import DevToolbar from "@/components/DevToolbar";
 import { GameSocket } from "@/lib/ws";
+import { useT, type Locale } from "@/lib/i18n";
 import type { Turn, JudgeReport, ScenarioDef } from "@/lib/api";
 
 type Phase = "setup" | "matchmaking" | "prep" | "battle";
@@ -58,9 +60,11 @@ const INITIAL_MP: MultiplayerState = {
 
 export default function Home() {
   const [phase, setPhase] = useState<Phase>("setup");
+  const [compactMode, setCompactMode] = useState(false);
   const socketRef = useRef<GameSocket | null>(null);
   const mpStateRef = useRef<MultiplayerState>(INITIAL_MP);
   const [mp, setMp] = useState<MultiplayerState>(INITIAL_MP);
+  const { t, locale, setLocale } = useT();
 
   const updateMp = useCallback((patch: Partial<MultiplayerState>) => {
     mpStateRef.current = { ...mpStateRef.current, ...patch };
@@ -75,7 +79,7 @@ export default function Home() {
     setMp(mpStateRef.current);
   }, []);
 
-  const handleFindMatch = useCallback((provider: string, modelName: string, apiKey: string) => {
+  const handleFindMatch = useCallback((provider: string, modelName: string, apiKey: string, compactMode: boolean) => {
     updateMp({ provider, modelName, apiKey, queuePosition: 0 });
     setPhase("matchmaking");
 
@@ -85,7 +89,7 @@ export default function Home() {
     socket.connect((event, data) => {
       switch (event) {
         case "ws_open":
-          socket.send("join_queue", { provider, model_name: modelName, api_key: apiKey });
+          socket.send("join_queue", { provider, model_name: modelName, api_key: apiKey, compact_mode: compactMode });
           break;
 
         case "ws_close": {
@@ -230,33 +234,84 @@ export default function Home() {
     updateMp(INITIAL_MP);
   }, [updateMp]);
 
-  return (
-    <div className="flex flex-col min-h-screen">
-      <header className="border-b border-zinc-800 px-3 sm:px-6 py-3 sm:py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center font-bold text-zinc-950 text-xs sm:text-sm shrink-0">
-              A
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-semibold tracking-tight truncate">AI Арена</h1>
-              <p className="text-[10px] sm:text-xs text-zinc-500 hidden sm:block">Мультиплеерная битва промптов</p>
-            </div>
-          </div>
-          {phase !== "setup" && (
-            <button
-              onClick={handleBackToSetup}
-              className="text-xs sm:text-sm text-zinc-400 hover:text-zinc-200 transition-colors shrink-0"
-            >
-              {phase === "battle" ? "Выйти" : "Отмена"}
-            </button>
-          )}
-        </div>
-      </header>
+  const devActions = {
+    jumpToPrep: (scenario: ScenarioDef) => {
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+      updateMp({
+        scenario,
+        yourRole: "agent_1",
+        opponentModel: "dev-mock-model",
+        gameId: "dev-" + Math.random().toString(36).slice(2, 8),
+        promptSubmitted: false,
+        prepComplete: false,
+        provider: "openai",
+        modelName: "gpt-4o",
+        apiKey: "dev-key",
+      });
+      setPhase("prep");
+    },
+    jumpToBattle: (data: {
+      scenario: ScenarioDef;
+      turns: Turn[];
+      phase: "connecting" | "running" | "judging" | "complete" | "error";
+      currentTurn: number;
+      streamingAgent: "agent_1" | "agent_2" | "judge" | null;
+      judgeReport?: JudgeReport;
+      secret?: string;
+      error?: string;
+    }) => {
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+      updateMp({
+        scenario: data.scenario,
+        yourRole: "agent_1",
+        opponentModel: "dev-mock-model",
+        gameId: "dev-" + Math.random().toString(36).slice(2, 8),
+        promptSubmitted: true,
+        prepComplete: true,
+        provider: "openai",
+        modelName: "gpt-4o",
+        apiKey: "dev-key",
+      });
+      updateBattle({
+        phase: data.phase,
+        turns: data.turns,
+        currentTurn: data.currentTurn,
+        maxTurns: data.scenario.max_turns,
+        streamingAgent: data.streamingAgent,
+        streamingContent: "",
+        judgeReport: data.judgeReport,
+        secret: data.secret,
+        error: data.error,
+        scenario: data.scenario,
+        gameId: "dev-001",
+      });
+      setPhase("battle");
+    },
+  };
 
+  return (
+    <div className="flex flex-col h-full relative bg-canvas">
+      {/* Floating back button */}
+        {phase !== "setup" && phase !== "battle" && (
+          <button
+            onClick={handleBackToSetup}
+            className="fixed top-4 left-4 z-40 card-subtle !rounded-lg !p-2 text-xs text-mute hover:text-ink transition-colors font-medium flex items-center gap-1.5"
+          >
+            <span className="inline-block w-2.5 h-2.5 border-l-2 border-t-2 border-current -rotate-45 translate-y-px" />
+            {t("app.cancel")}
+          </button>
+        )}
       <main className="flex-1 flex flex-col">
         {phase === "setup" && (
-          <SetupScreen onFindMatch={handleFindMatch} />
+          <SetupScreen
+            onFindMatch={handleFindMatch}
+            compactMode={compactMode}
+            onCompactChange={setCompactMode}
+            locale={locale}
+            onLocaleChange={setLocale}
+          />
         )}
 
         {phase === "matchmaking" && (
@@ -270,11 +325,6 @@ export default function Home() {
           <PrepScreen
             scenario={mp.scenario}
             yourRole={mp.yourRole}
-            promptHint={
-              mp.yourRole === "agent_1"
-                ? mp.scenario.agent_1_prompt_hint
-                : mp.scenario.agent_2_prompt_hint
-            }
             onSubmit={handleSubmitPrompt}
           />
         )}
@@ -286,6 +336,14 @@ export default function Home() {
           />
         )}
       </main>
+
+      {process.env.NODE_ENV === "development" && phase === "setup" && (
+        <DevToolbar
+          actions={devActions}
+          compactMode={compactMode}
+          onCompactChange={setCompactMode}
+        />
+      )}
     </div>
   );
 }

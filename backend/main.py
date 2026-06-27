@@ -18,10 +18,10 @@ from routers.ws import router as ws_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    print("🚀 AI Arena backend starting...")
+    print("[AI Arena] backend starting...")
     yield
     # Shutdown
-    print("👋 AI Arena backend shutting down...")
+    print("[AI Arena] backend shutting down...")
 
 
 app = FastAPI(

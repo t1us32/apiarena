@@ -24,7 +24,7 @@ from services.llm_service import LLMService
 
 llm_service = LLMService()
 
-PREP_TIMEOUT = 30
+PREP_TIMEOUT = 80
 
 
 # ── Player record ─────────────────────────────────────────────────────
@@ -37,6 +37,7 @@ class Player:
     model_name: str
     api_key: str
     api_base: Optional[str] = None
+    compact_mode: bool = False
 
 
 # ── Game Room ─────────────────────────────────────────────────────────
@@ -58,8 +59,8 @@ class GameRoom:
     async def send(self, player: Player, event: str, data: dict):
         try:
             await player.ws.send_json({"event": event, "data": data})
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[matchmaking] send failed for {player.player_id} event={event}: {e}")
 
     async def broadcast(self, event: str, data: dict):
         await self.send(self.player_1, event, data)
@@ -122,6 +123,15 @@ class GameRoom:
             )
             judge_llm = agent_1_llm
 
+            compact = self.player_1.compact_mode or self.player_2.compact_mode
+            compact_limit = ""
+            if compact:
+                compact_limit = (
+                    "\n\n[ОГРАНИЧЕНИЕ]: Отвечай ПРЕДЕЛЬНО КОРОТКО — "
+                    "ровно одно предложение, не более 80 символов. "
+                    "Без предисловий, пояснений и вежливостей. Только суть."
+                )
+
             await self.broadcast("prep_complete", {"game_id": self.game_id})
             await asyncio.sleep(0.5)
 
@@ -132,15 +142,12 @@ class GameRoom:
 
             agent_1_system = self.scenario.build_agent_1_prompt(
                 secret=secret, max_turns=max_turns, custom_prompt=agent_1_prompt
-            )
-            agent_2_system_base = self.scenario.build_agent_2_prompt(
-                max_turns=max_turns, current_turn=1, custom_prompt=agent_2_prompt
-            )
+            ) + compact_limit
 
             for turn_num in range(1, max_turns + 1):
                 agent_2_system = self.scenario.build_agent_2_prompt(
                     max_turns=max_turns, current_turn=turn_num, custom_prompt=agent_2_prompt
-                )
+                ) + compact_limit
                 agent_1_history = self._build_history("agent_1")
                 agent_2_history = self._build_history("agent_2")
 
@@ -309,21 +316,30 @@ class MatchmakingManager:
                     self._player_rooms[p2.player_id] = game_id
 
                     asyncio.create_task(room.run())
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[matchmaking] matcher loop error: {e}")
             await asyncio.sleep(0.5)
 
     async def _requeue(self, player: Player):
         try:
             await self._queue.put(player)
-        except Exception:
-            pass
+            # Notify player of their new queue position
+            try:
+                await player.ws.send_json({
+                    "event": "queue_joined",
+                    "data": {"position": self._queue.qsize(), "player_id": player.player_id}
+                })
+            except Exception:
+                pass
+        except Exception as e:
+            print(f"[matchmaking] requeue failed: {e}")
 
     async def join_queue(self, ws: WebSocket, provider: str, model_name: str, api_key: str,
-                         api_base: Optional[str] = None) -> Player:
+                         api_base: Optional[str] = None, compact_mode: bool = False) -> Player:
         player_id = uuid.uuid4().hex[:10]
         player = Player(ws=ws, player_id=player_id, provider=provider,
-                        model_name=model_name, api_key=api_key, api_base=api_base)
+                        model_name=model_name, api_key=api_key, api_base=api_base,
+                        compact_mode=compact_mode)
         await self._queue.put(player)
         queue_size = self._queue.qsize()
         await ws.send_json({"event": "queue_joined", "data": {"position": queue_size, "player_id": player_id}})
@@ -335,8 +351,13 @@ class MatchmakingManager:
     def get_player_room(self, player_id: str) -> Optional[str]:
         return self._player_rooms.get(player_id)
 
-    def remove_from_queue(self, player_id: str):
-        pass  # approximate — dead players are caught by ping in matcher loop
+    async def remove_from_queue(self, player_id: str):
+        # Remove directly from the underlying deque (no API for this on asyncio.Queue)
+        async with self._lock:
+            for i, player in enumerate(self._queue._queue):
+                if player.player_id == player_id:
+                    del self._queue._queue[i]
+                    return
 
     def cleanup(self, game_id: str):
         room = self._rooms.pop(game_id, None)
